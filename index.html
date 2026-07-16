@@ -433,7 +433,7 @@ function renderCategories() {
     items.className = 'cat-items';
     assigned.slice(0, 18).forEach(f => {
       const img = document.createElement('img');
-      img.src = `thumbnails/${f.id}.png`;
+      img.src = `thumbnails/${encodeURIComponent(f.name)}.png`;
       img.className = 'cat-thumb';
       img.title = f.name;
       img.onclick = e => { e.stopPropagation(); unassign(f.id); };
@@ -488,9 +488,10 @@ function renderPool() {
     item.onclick     = ()=> selectItem(f.id);
 
     const img = document.createElement('img');
-    img.src = `thumbnails/${f.id}.png`;
+    img.src = `thumbnails/${encodeURIComponent(f.name)}.png`;
     img.className = 'furn-thumb';
     img.alt = f.name;
+    img.title = f.name;
     img.onerror = function() {
       this.remove();
       const ph = document.createElement('div');
@@ -499,12 +500,7 @@ function renderPool() {
       item.prepend(ph);
     };
 
-    const name = document.createElement('div');
-    name.className = 'furn-name';
-    name.textContent = f.name;
-
     item.appendChild(img);
-    item.appendChild(name);
     el.appendChild(item);
   });
 }
