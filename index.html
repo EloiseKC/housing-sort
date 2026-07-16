@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Housing 2 — Inventory Sort</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111118;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: #1a1a2e;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid #2d2d4e;
+      flex-wrap: wrap;
+    }
+    .header h1 { font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .header input[type="text"] {
+      background: #2d2d4e;
+      border: 1px solid #3d3d5e;
+      color: #e0e0e0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      width: 180px;
+    }
+    .header input[type="text"]::placeholder { color: #666; }
+    .progress { margin-left: auto; font-size: 13px; color: #a0a0c0; white-space: nowrap; }
+    .progress span { color: #fff; font-weight: 700; }
+    .btn-submit {
+      background: #5b4fcf;
+      color: #fff;
+      border: none;
+      padding: 9px 22px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .btn-submit:hover:not(:disabled) { background: #7060ef; }
+    .btn-submit:disabled { background: #2a2a4a; color: #555; cursor: not-allowed; }
+
+    /* ── CATEGORIES ── */
+    .categories {
+      display: flex;
+      gap: 10px;
+      padding: 14px 24px;
+      background: #16162a;
+      border-bottom: 1px solid #2d2d4e;
+      overflow-x: auto;
+    }
+    .cat-bin {
+      flex: 1;
+      min-width: 130px;
+      max-width: 200px;
+      background: #1e1e38;
+      border: 2px dashed #3d3d5e;
+      border-radius: 12px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      min-height: 110px;
+    }
+    .cat-bin:hover      { border-color: #7060ef; background: #232345; }
+    .cat-bin.drag-over  { border-color: #f5a623; background: #2a2418; border-style: solid; }
+    .cat-bin.ready      { border-color: #f5a623; }
+
+    .cat-icon { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
+    .cat-icon-fallback { font-size: 30px; line-height: 44px; pointer-events: none; }
+    .cat-name { font-size: 10px; color: #9090b0; text-align: center; line-height: 1.3; }
+    .cat-count {
+      background: #5b4fcf;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 99px;
+      min-width: 24px;
+      text-align: center;
+    }
+    .cat-count.full { background: #2a7a3a; }
+    .cat-items { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
+    .cat-thumb {
+      width: 32px; height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+      background: #2d2d4e;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: border-color 0.1s;
+    }
+    .cat-thumb:hover { border-color: #f5a623; }
+    .cat-thumb-ph {
+      width: 32px; height: 32px;
+      border-radius: 4px;
+      background: #2d2d4e;
+      border: 1px solid #3d3d5e;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 7px; color: #666;
+      text-align: center; padding: 2px;
+      cursor: pointer;
+      transition: border-color 0.1s;
+    }
+    .cat-thumb-ph:hover { border-color: #f5a623; }
+
+    /* ── HINT BAR ── */
+    .hint-bar {
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #13131f;
+      border-bottom: 1px solid #1e1e38;
+    }
+    .hint-bar p { font-size: 12px; color: #555; }
+    .hint-bar p strong { color: #f5a623; }
+    .unassigned-count { font-size: 12px; color: #a0a0c0; margin-left: auto; }
+
+    /* ── POOL ── */
+    .pool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: 8px;
+      padding: 16px 24px 80px;
+    }
+    .pool-empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px 24px;
+      color: #3a7a4a;
+      font-size: 15px;
+    }
+
+    /* ── FURNITURE ITEMS ── */
+    .furn-item {
+      background: #1e1e2e;
+      border-radius: 8px;
+      padding: 8px 6px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.12s, transform 0.1s, background 0.12s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .furn-item:hover              { border-color: #3d3d5e; }
+    .furn-item.selected           { border-color: #f5a623; background: #25200e; transform: scale(1.04); }
+    .furn-item.dragging           { opacity: 0.4; }
+    .furn-thumb {
+      width: 80px; height: 80px;
+      object-fit: contain;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+    .furn-thumb-ph {
+      width: 80px; height: 80px;
+      background: #2d2d4e;
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #888;
+      text-align: center; padding: 6px;
+      line-height: 1.3;
+      pointer-events: none;
+    }
+    .furn-name {
+      font-size: 9px;
+      color: #8080a0;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2d2d4e;
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 300;
+      transition: opacity 0.3s;
+      white-space: nowrap;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    .toast.success { background: #1a5c2a; }
+    .toast.error   { background: #5c1a1a; }
+
+    /* ── SELECTED BANNER ── */
+    #selected-banner {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #25200e;
+      border-top: 2px solid #f5a623;
+      padding: 10px 24px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      z-index: 50;
+      font-size: 13px;
+    }
+    #selected-banner.visible { display: flex; }
+    #selected-banner strong { color: #f5a623; }
+    #selected-banner button {
+      margin-left: auto;
+      background: none;
+      border: 1px solid #555;
+      color: #a0a0c0;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    #selected-banner button:hover { border-color: #f5a623; color: #f5a623; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏠 Housing 2 — Inventory Sort</h1>
+  <input type="text" id="respondent" placeholder="Your name (optional)">
+  <div class="progress">Placed: <span id="placed-count">0</span> / <span id="total-count">100</span></div>
+  <button class="btn-submit" id="submit-btn" onclick="submitResults()">Submit</button>
+</div>
+
+<div class="categories" id="categories"></div>
+
+<div class="hint-bar">
+  <p><strong>Click</strong> a thumbnail to select it, then <strong>click a category</strong> above. Or <strong>drag and drop</strong>. Click a mini-thumb inside a category to send it back.</p>
+  <div class="unassigned-count" id="unassigned-label">100 unassigned</div>
+</div>
+
+<div class="pool-grid" id="pool"
+  ondragover="event.preventDefault()"
+  ondrop="dropOnPool(event)">
+</div>
+
+<div id="selected-banner">
+  <span>Selected: <strong id="selected-name">—</strong></span>
+  <span style="color:#666">→ click a category to assign</span>
+  <button onclick="clearSelection()">✕ Cancel</button>
+</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+// Paste your Google Apps Script webhook URL here after deployment
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyTjLVNOO-v2BmbAcvJf9F9m7wgPPj32FfG6wPLjNJGoTtWaugY3Fd-5e0Tww5grPlVYQ/exec';
+
+// ── FURNITURE DATA ──────────────────────────────────────────────────────────
+const FURNITURE = [
+  {id:1,   name:'Palm Plant',               type:'Plant'},
+  {id:4,   name:'Modern Flat Screen TV',    type:'TV'},
+  {id:5,   name:'Classical Armchair',       type:'Armchair'},
+  {id:6,   name:'Industrial Dining Chair',  type:'DiningChair'},
+  {id:7,   name:'Mid-Century Dining Chair', type:'DiningChair'},
+  {id:8,   name:'Cottage Sofa',             type:'Sofa'},
+  {id:11,  name:'Mid-Century Dining Table', type:'DiningTable'},
+  {id:18,  name:'Paper Bin',                type:'Bin'},
+  {id:19,  name:'Modern Armchair',          type:'Armchair'},
+  {id:20,  name:'Egg Shell Armchair',       type:'Armchair'},
+  {id:21,  name:'Modern Sofa',              type:'Sofa'},
+  {id:22,  name:'Chesterfield Sofa',        type:'Sofa'},
+  {id:23,  name:'Industrial Coffee Table',  type:'CoffeeTable'},
+  {id:24,  name:'Rustic Coffee Table',      type:'CoffeeTable'},
+  {id:25,  name:'Marble Coffee Table',      type:'CoffeeTable'},
+  {id:26,  name:'Stove',                    type:'Fireplace'},
+  {id:27,  name:'Chimney',                  type:'Fireplace'},
+  {id:28,  name:'Washing Machine',          type:'WashingMachine'},
+  {id:29,  name:'Tulip Table',              type:'DiningTable'},
+  {id:30,  name:'Rustic Table',             type:'DiningTable'},
+  {id:31,  name:'Rustic Chair',             type:'DiningChair'},
+  {id:32,  name:'Modern Desk',              type:'Desk'},
+  {id:33,  name:'Neon Desk',                type:'Desk'},
+  {id:34,  name:'Executive Desk',           type:'Desk'},
+  {id:35,  name:'Office Rolling Chair',     type:'OfficeChair'},
+  {id:36,  name:'Neon Rolling Chair',       type:'OfficeChair'},
+  {id:37,  name:'Executive Rolling Chair',  type:'OfficeChair'},
+  {id:38,  name:'Modern Oven',              type:'Stove'},
+  {id:39,  name:'Retro Oven',               type:'Stove'},
+  {id:40,  name:'Pizza Oven',               type:'Stove'},
+  {id:41,  name:'Modern Fridge',            type:'Fridge'},
+  {id:42,  name:'Retro Fridge',             type:'Fridge'},
+  {id:43,  name:'Mini Fridge',              type:'Fridge'},
+  {id:44,  name:'Modern Kitchen Cabinet',   type:'KitchenCounter'},
+  {id:45,  name:'Rustic Kitchen Cabinet',   type:'KitchenCounter'},
+  {id:46,  name:'Marble Kitchen Cabinet',   type:'KitchenCounter'},
+  {id:47,  name:'Modern Sink',              type:'KitchenSink'},
+  {id:48,  name:'Rustic Sink',              type:'KitchenSink'},
+  {id:49,  name:'Marble Sink',              type:'KitchenSink'},
+  {id:50,  name:'Trashcan',                 type:'Trashcan'},
+  {id:51,  name:'Dishwasher',               type:'Dishwasher'},
+  {id:52,  name:'Industrial Bed',           type:'DoubleBed'},
+  {id:53,  name:'Modern Bed',               type:'DoubleBed'},
+  {id:54,  name:'Racing Bed',               type:'SingleBed'},
+  {id:55,  name:'Rustic Bed',               type:'SingleBed'},
+  {id:56,  name:'Modern Nightstand',        type:'Nightstand'},
+  {id:57,  name:'Rustic Nightstand',        type:'Nightstand'},
+  {id:58,  name:'Round Side Table',         type:'Nightstand'},
+  {id:59,  name:'Modern Bookshelf',         type:'HighOpenShelve'},
+  {id:60,  name:'Rustic High Shelves',      type:'HighOpenShelve'},
+  {id:61,  name:'Industrial Bookshelf',     type:'HighOpenShelve'},
+  {id:62,  name:'Retro Bookshelf',          type:'HighOpenShelve'},
+  {id:63,  name:'Modern Closet',            type:'HighCloseShelves'},
+  {id:64,  name:'Rustic Closet',            type:'HighCloseShelves'},
+  {id:65,  name:'Locker',                   type:'HighCloseShelves'},
+  {id:66,  name:'Modern Double Drawer',     type:'LowShelve'},
+  {id:67,  name:'Rustic Sideboard',         type:'LowShelve'},
+  {id:68,  name:'Industrial Sideboard',     type:'LowShelve'},
+  {id:69,  name:'Retro Sideboard',          type:'LowShelve'},
+  {id:70,  name:'Modern Shelf',             type:'WallShelve'},
+  {id:71,  name:'Rustic Shelf',             type:'WallShelve'},
+  {id:72,  name:'Industrial Shelf',         type:'WallShelve'},
+  {id:73,  name:'Neon Shelf',               type:'WallShelve'},
+  {id:74,  name:'Modern Lamp',              type:'FloorLamp'},
+  {id:75,  name:'Rustic Lamp',              type:'FloorLamp'},
+  {id:76,  name:'Industrial Lamp',          type:'FloorLamp'},
+  {id:77,  name:'Sputnik Lamp',             type:'FloorLamp'},
+  {id:78,  name:'Monstera Plant',           type:'Plant'},
+  {id:79,  name:'Plant Wall',               type:'Plant'},
+  {id:80,  name:'Cacti',                    type:'Plant'},
+  {id:81,  name:'Modern Rug',               type:'Rug'},
+  {id:82,  name:'Persian Rug',              type:'Rug'},
+  {id:83,  name:'Boho Rug',                 type:'Rug'},
+  {id:84,  name:'Cow Rug',                  type:'Rug'},
+  {id:85,  name:'Dumbbell Rack',            type:'Sport'},
+  {id:86,  name:'Punching Bag',             type:'Sport'},
+  {id:87,  name:'Exercise Bike',            type:'Sport'},
+  {id:88,  name:'Trophy Shelf',             type:'Sport'},
+  {id:89,  name:'Guitar',                   type:'Music'},
+  {id:90,  name:'Piano',                    type:'Music'},
+  {id:91,  name:'Vintage Record Player',    type:'Music'},
+  {id:92,  name:'Jukebox',                  type:'Music'},
+  {id:93,  name:'Skeleton',                 type:'Science'},
+  {id:94,  name:'Vintage Globe',            type:'Science'},
+  {id:95,  name:'Telescope',               type:'Science'},
+  {id:96,  name:'Pin Board',               type:'Science'},
+  {id:97,  name:'Teddy Bear',              type:'Toy'},
+  {id:98,  name:'Billard Table',           type:'Toy'},
+  {id:99,  name:'Toy Box',                 type:'Toy'},
+  {id:100, name:'Arcade Machine',          type:'Toy'},
+  {id:101, name:'Traffic Rug',             type:'Toy'},
+  {id:102, name:'Aquarium',               type:'Decorative'},
+  {id:103, name:'Pet Bed',                type:'Decorative'},
+  {id:104, name:'Marble Statue',           type:'Decorative'},
+  {id:105, name:'Fishing Trophy',          type:'Decorative'},
+  {id:106, name:'Retro TV',               type:'TV'},
+  {id:107, name:'Curtain A',              type:'Curtain'},
+  {id:108, name:'Curtain B',              type:'Curtain'},
+  {id:109, name:'Speaker',               type:'Music'},
+  {id:110, name:'Coat Rack',             type:'Decorative'},
+];
+
+const CATEGORIES = [
+  {id:1, name:'Seating & Beds',    emoji:'🛋️', icon:'icons/cat1.png'},
+  {id:2, name:'Tables & Surfaces', emoji:'🪵', icon:'icons/cat2.png'},
+  {id:3, name:'Storage',           emoji:'📦', icon:'icons/cat3.png'},
+  {id:4, name:'Appliances',        emoji:'🔌', icon:'icons/cat4.png'},
+  {id:5, name:'Hobbies',           emoji:'🎸', icon:'icons/cat5.png'},
+  {id:6, name:'Decor',             emoji:'🪴', icon:'icons/cat6.png'},
+];
+
+// ── STATE ───────────────────────────────────────────────────────────────────
+const assignments = {};
+let selectedId  = null;
+let dragId      = null;
+
+FURNITURE.forEach(f => assignments[f.id] = null);
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  renderCategories();
+  renderPool();
+  renderBanner();
+  updateProgress();
+}
+
+function renderCategories() {
+  const el = document.getElementById('categories');
+  el.innerHTML = '';
+
+  CATEGORIES.forEach(cat => {
+    const assigned = FURNITURE.filter(f => assignments[f.id] === cat.id);
+    const bin = document.createElement('div');
+    bin.className = 'cat-bin' + (selectedId !== null ? ' ready' : '');
+    bin.dataset.catId = cat.id;
+
+    bin.ondragover  = e => { e.preventDefault(); bin.classList.add('drag-over'); };
+    bin.ondragleave = ()=> bin.classList.remove('drag-over');
+    bin.ondrop      = e => { e.preventDefault(); bin.classList.remove('drag-over'); dropOnCat(cat.id); };
+    bin.onclick     = ()=> assignSelected(cat.id);
+
+    // Icon
+    const iconImg = document.createElement('img');
+    iconImg.src = cat.icon;
+    iconImg.className = 'cat-icon';
+    iconImg.onerror = function() {
+      this.remove();
+      const fb = document.createElement('div');
+      fb.className = 'cat-icon-fallback';
+      fb.textContent = cat.emoji;
+      bin.prepend(fb);
+    };
+
+    const count = document.createElement('span');
+    count.className = 'cat-count' + (assigned.length > 0 ? ' full' : '');
+    count.textContent = assigned.length;
+
+    const items = document.createElement('div');
+    items.className = 'cat-items';
+    assigned.slice(0, 18).forEach(f => {
+      const img = document.createElement('img');
+      img.src = `thumbnails/${f.id}.png`;
+      img.className = 'cat-thumb';
+      img.title = f.name;
+      img.onclick = e => { e.stopPropagation(); unassign(f.id); };
+      img.onerror = function() {
+        this.remove();
+        const ph = document.createElement('div');
+        ph.className = 'cat-thumb-ph';
+        ph.title = f.name;
+        ph.textContent = f.name.substring(0, 10);
+        ph.onclick = e => { e.stopPropagation(); unassign(f.id); };
+        items.appendChild(ph);
+      };
+      items.appendChild(img);
+    });
+    if (assigned.length > 18) {
+      const more = document.createElement('div');
+      more.className = 'cat-thumb-ph';
+      more.textContent = `+${assigned.length - 18}`;
+      items.appendChild(more);
+    }
+
+    bin.appendChild(iconImg);
+    bin.appendChild(count);
+    bin.appendChild(items);
+    el.appendChild(bin);
+  });
+}
+
+function renderPool() {
+  const el = document.getElementById('pool');
+  el.innerHTML = '';
+  const unassigned = FURNITURE.filter(f => assignments[f.id] === null);
+
+  if (unassigned.length === 0) {
+    el.innerHTML = '<div class="pool-empty">✅ All furniture assigned — ready to submit!</div>';
+    return;
+  }
+
+  unassigned.forEach(f => {
+    const item = document.createElement('div');
+    item.className = 'furn-item' + (selectedId === f.id ? ' selected' : '');
+    item.dataset.id  = f.id;
+    item.draggable   = true;
+
+    item.ondragstart = e => {
+      dragId = f.id;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', f.id);
+    };
+    item.ondragend   = ()=> { dragId = null; item.classList.remove('dragging'); };
+    item.onclick     = ()=> selectItem(f.id);
+
+    const img = document.createElement('img');
+    img.src = `thumbnails/${f.id}.png`;
+    img.className = 'furn-thumb';
+    img.alt = f.name;
+    img.onerror = function() {
+      this.remove();
+      const ph = document.createElement('div');
+      ph.className = 'furn-thumb-ph';
+      ph.textContent = f.name;
+      item.prepend(ph);
+    };
+
+    const name = document.createElement('div');
+    name.className = 'furn-name';
+    name.textContent = f.name;
+
+    item.appendChild(img);
+    item.appendChild(name);
+    el.appendChild(item);
+  });
+}
+
+function renderBanner() {
+  const banner = document.getElementById('selected-banner');
+  if (selectedId !== null) {
+    const f = FURNITURE.find(x => x.id === selectedId);
+    document.getElementById('selected-name').textContent = f ? f.name : '';
+    banner.classList.add('visible');
+  } else {
+    banner.classList.remove('visible');
+  }
+}
+
+function updateProgress() {
+  const placed     = FURNITURE.filter(f => assignments[f.id] !== null).length;
+  const unassigned = FURNITURE.length - placed;
+  document.getElementById('placed-count').textContent    = placed;
+  document.getElementById('unassigned-label').textContent = `${unassigned} unassigned`;
+}
+
+// ── INTERACTIONS ─────────────────────────────────────────────────────────────
+function selectItem(id) {
+  selectedId = selectedId === id ? null : id;
+  render();
+}
+
+function clearSelection() {
+  selectedId = null;
+  render();
+}
+
+function assignSelected(catId) {
+  if (selectedId !== null) {
+    assignments[selectedId] = catId;
+    selectedId = null;
+    render();
+  }
+}
+
+function unassign(furnitureId) {
+  assignments[furnitureId] = null;
+  selectedId = null;
+  render();
+}
+
+function dropOnCat(catId) {
+  const id = dragId !== null ? dragId : selectedId;
+  if (id !== null) {
+    assignments[id] = catId;
+    dragId     = null;
+    selectedId = null;
+    render();
+  }
+}
+
+function dropOnPool(e) {
+  if (dragId !== null) {
+    assignments[dragId] = null;
+    dragId = null;
+    render();
+  }
+}
+
+// ── SUBMIT ───────────────────────────────────────────────────────────────────
+async function submitResults() {
+  const unassigned = FURNITURE.filter(f => assignments[f.id] === null).length;
+  if (unassigned > 0) {
+    const ok = confirm(`${unassigned} item(s) not assigned. Submit anyway?`);
+    if (!ok) return;
+  }
+
+  if (!WEBHOOK_URL) {
+    showToast('⚠️ No webhook URL configured in index.html', 'error');
+    return;
+  }
+
+  const respondent = document.getElementById('respondent').value.trim() || 'Anonymous';
+  const sessionId  = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  const payload = {
+    timestamp:   new Date().toISOString(),
+    respondent,
+    session_id:  sessionId,
+    assignments: FURNITURE.map(f => ({
+      id:            f.id,
+      name:          f.name,
+      type:          f.type,
+      category_id:   assignments[f.id] ?? '',
+      category_name: assignments[f.id]
+        ? CATEGORIES.find(c => c.id === assignments[f.id]).name
+        : 'Unassigned',
+    }))
+  };
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled     = true;
+  btn.textContent  = 'Sending…';
+
+  try {
+    await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      mode: 'no-cors',
+    });
+    showToast('✅ Results submitted!', 'success');
+    btn.textContent = 'Submitted ✓';
+  } catch (err) {
+    showToast('❌ Submission failed. Check webhook URL.', 'error');
+    btn.disabled    = false;
+    btn.textContent = 'Submit';
+  }
+}
+
+function showToast(msg, type = '') {
+  const t = document.createElement('div');
+  t.className   = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
