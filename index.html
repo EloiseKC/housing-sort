@@ -3,375 +3,295 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Housing 2 — Inventory Sort</title>
+  <title>Housing 2 — Category Sort</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      background: #111118;
-      color: #e0e0e0;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      min-height: 100vh;
+    :root {
+      --bg:        #EDD9A3;
+      --bg-circle: #F8EFD4;
+      --text-dark: #4A2E12;
+      --text-mid:  #9B7040;
+      --text-soft: #C4A070;
+      --accent:    #E8945A;
+      --accent-dk: #C97940;
+      --white:     #FFFFFF;
+      --shadow:    0 4px 24px rgba(74,46,18,0.13);
     }
-
-    /* ── HEADER ── */
-    .header {
-      background: #1a1a2e;
-      padding: 14px 24px;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text-dark);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
       display: flex;
-      align-items: center;
-      gap: 16px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      border-bottom: 1px solid #2d2d4e;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    .progress-track { height: 5px; background: rgba(74,46,18,0.12); }
+    .progress-fill  { height: 100%; background: var(--accent); transition: width 0.4s ease; border-radius: 0 3px 3px 0; }
+    .header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px;
+      background: rgba(237,217,163,0.96);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(74,46,18,0.1);
       flex-wrap: wrap;
     }
-    .header h1 { font-size: 15px; font-weight: 700; color: #fff; flex-shrink: 0; }
-    .header input[type="text"] {
-      background: #2d2d4e;
-      border: 1px solid #3d3d5e;
-      color: #e0e0e0;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-      width: 180px;
+    .header-title { font-size: 15px; font-weight: 700; flex-shrink: 0; }
+    .name-input {
+      background: rgba(255,255,255,0.7);
+      border: 1.5px solid rgba(74,46,18,0.18);
+      border-radius: 8px; padding: 7px 12px;
+      font-size: 13px; color: var(--text-dark); width: 150px;
     }
-    .header input[type="text"]::placeholder { color: #666; }
-    .progress { margin-left: auto; font-size: 13px; color: #a0a0c0; white-space: nowrap; }
-    .progress span { color: #fff; font-weight: 700; }
+    .name-input::placeholder { color: var(--text-soft); }
+    .name-input:focus { outline: none; border-color: var(--accent); }
+    .progress-label { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--text-mid); white-space: nowrap; }
     .btn-submit {
-      background: #5b4fcf;
-      color: #fff;
-      border: none;
-      padding: 9px 22px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: background 0.2s;
-      white-space: nowrap;
+      background: var(--text-dark); color: #fff; border: none;
+      padding: 8px 20px; border-radius: 10px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: background 0.2s; white-space: nowrap;
     }
-    .btn-submit:hover:not(:disabled) { background: #7060ef; }
-    .btn-submit:disabled { background: #2a2a4a; color: #555; cursor: not-allowed; }
-
-    /* ── CATEGORIES ── */
-    .categories {
-      display: flex;
-      gap: 10px;
-      padding: 14px 24px;
-      background: #16162a;
-      border-bottom: 1px solid #2d2d4e;
-      overflow-x: auto;
+    .btn-submit:hover:not(:disabled) { background: #6b4020; }
+    .btn-submit:disabled { opacity: 0.35; cursor: not-allowed; }
+    .main {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 28px 20px 16px; gap: 18px;
+    }
+    .item-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .item-circle {
+      width: 220px; height: 220px; border-radius: 50%;
+      background: var(--bg-circle);
+      border: 3px solid rgba(255,255,255,0.85);
+      box-shadow: var(--shadow);
+      display: flex; align-items: center; justify-content: center;
+      cursor: grab; user-select: none;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .item-circle:active { cursor: grabbing; }
+    .item-circle.dragging { opacity: 0.5; transform: scale(0.95); }
+    .item-circle.is-assigned { border-color: var(--accent); }
+    .item-thumb { width: 160px; height: 160px; object-fit: contain; pointer-events: none; }
+    .item-thumb-ph {
+      width: 160px; height: 160px;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; font-size: 12px; color: var(--text-mid);
+      padding: 16px; pointer-events: none;
+    }
+    .item-name { font-size: 14px; font-weight: 600; color: var(--text-dark); text-align: center; }
+    .item-badge {
+      font-size: 11px; font-weight: 600; color: var(--accent-dk);
+      background: rgba(232,148,90,0.15);
+      padding: 3px 12px; border-radius: 99px; display: none;
+    }
+    .item-badge.visible { display: block; }
+    .nav-row { display: flex; align-items: center; gap: 14px; }
+    .nav-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: rgba(255,255,255,0.7);
+      border: 1.5px solid rgba(74,46,18,0.15);
+      color: var(--text-mid); font-size: 15px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) { background: var(--white); border-color: var(--accent); color: var(--accent-dk); }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .nav-counter { font-size: 13px; color: var(--text-mid); min-width: 56px; text-align: center; font-weight: 500; }
+    .hint { font-size: 12px; color: var(--text-soft); }
+    .done-panel { display: none; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+    .done-panel.visible { display: flex; }
+    .done-panel .done-icon { font-size: 52px; }
+    .done-panel h2 { font-size: 18px; }
+    .done-panel p  { font-size: 13px; color: var(--text-mid); }
+    .cat-bar {
+      background: rgba(237,217,163,0.96);
+      border-top: 1px solid rgba(74,46,18,0.1);
+      padding: 12px 16px 14px;
+      display: flex; gap: 10px; justify-content: center; overflow-x: auto;
     }
     .cat-bin {
-      flex: 1;
-      min-width: 130px;
-      max-width: 200px;
-      background: #1e1e38;
-      border: 2px dashed #3d3d5e;
-      border-radius: 12px;
-      padding: 10px 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
+      background: rgba(255,255,255,0.82);
+      border: 2px solid rgba(74,46,18,0.12);
+      border-radius: 18px; padding: 10px 14px; min-width: 86px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-      min-height: 110px;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
     }
-    .cat-bin:hover      { border-color: #7060ef; background: #232345; }
-    .cat-bin.drag-over  { border-color: #f5a623; background: #2a2418; border-style: solid; }
-    .cat-bin.ready      { border-color: #f5a623; }
-
-    .cat-icon { width: 44px; height: 44px; object-fit: contain; pointer-events: none; }
-    .cat-icon-fallback { font-size: 30px; line-height: 44px; pointer-events: none; }
-    .cat-name { font-size: 10px; color: #9090b0; text-align: center; line-height: 1.3; }
+    .cat-bin:hover {
+      border-color: var(--accent); background: var(--white);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(74,46,18,0.12);
+    }
+    .cat-bin.drag-over {
+      border-color: var(--accent); background: #FFF5EC;
+      transform: scale(1.06);
+      box-shadow: 0 8px 28px rgba(232,148,90,0.28);
+    }
+    .cat-bin.active-cat { border-color: var(--accent-dk); background: rgba(232,148,90,0.1); }
+    .cat-icon    { width: 48px; height: 48px; object-fit: contain; pointer-events: none; }
+    .cat-icon-fb { font-size: 32px; pointer-events: none; line-height: 1; }
     .cat-count {
-      background: #5b4fcf;
-      color: #fff;
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 8px;
-      border-radius: 99px;
-      min-width: 24px;
-      text-align: center;
+      background: var(--text-dark); color: var(--white);
+      font-size: 11px; font-weight: 700;
+      padding: 2px 9px; border-radius: 99px;
+      min-width: 26px; text-align: center; transition: background 0.2s;
     }
-    .cat-count.full { background: #2a7a3a; }
-    .cat-items { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
-    .cat-thumb {
-      width: 32px; height: 32px;
-      border-radius: 4px;
-      object-fit: cover;
-      background: #2d2d4e;
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: border-color 0.1s;
-    }
-    .cat-thumb:hover { border-color: #f5a623; }
-    .cat-thumb-ph {
-      width: 32px; height: 32px;
-      border-radius: 4px;
-      background: #2d2d4e;
-      border: 1px solid #3d3d5e;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 7px; color: #666;
-      text-align: center; padding: 2px;
-      cursor: pointer;
-      transition: border-color 0.1s;
-    }
-    .cat-thumb-ph:hover { border-color: #f5a623; }
-
-    /* ── HINT BAR ── */
-    .hint-bar {
-      padding: 10px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      background: #13131f;
-      border-bottom: 1px solid #1e1e38;
-    }
-    .hint-bar p { font-size: 12px; color: #555; }
-    .hint-bar p strong { color: #f5a623; }
-    .unassigned-count { font-size: 12px; color: #a0a0c0; margin-left: auto; }
-
-    /* ── POOL ── */
-    .pool-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-      gap: 8px;
-      padding: 16px 24px 80px;
-    }
-    .pool-empty {
-      grid-column: 1/-1;
-      text-align: center;
-      padding: 60px 24px;
-      color: #3a7a4a;
-      font-size: 15px;
-    }
-
-    /* ── FURNITURE ITEMS ── */
-    .furn-item {
-      background: #1e1e2e;
-      border-radius: 8px;
-      padding: 8px 6px 6px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: border-color 0.12s, transform 0.1s, background 0.12s;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .furn-item:hover              { border-color: #3d3d5e; }
-    .furn-item.selected           { border-color: #f5a623; background: #25200e; transform: scale(1.04); }
-    .furn-item.dragging           { opacity: 0.4; }
-    .furn-thumb {
-      width: 80px; height: 80px;
-      object-fit: contain;
-      border-radius: 4px;
-      pointer-events: none;
-    }
-    .furn-thumb-ph {
-      width: 80px; height: 80px;
-      background: #2d2d4e;
-      border-radius: 4px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px; color: #888;
-      text-align: center; padding: 6px;
-      line-height: 1.3;
-      pointer-events: none;
-    }
-    .furn-name {
-      font-size: 9px;
-      color: #8080a0;
-      text-align: center;
-      line-height: 1.3;
-    }
-
-    /* ── TOAST ── */
+    .cat-count.filled { background: var(--accent); }
     .toast {
-      position: fixed;
-      bottom: 28px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #2d2d4e;
-      color: #fff;
-      padding: 12px 28px;
-      border-radius: 10px;
-      font-size: 14px;
-      z-index: 300;
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: var(--text-dark); color: var(--white);
+      padding: 10px 24px; border-radius: 10px;
+      font-size: 13px; z-index: 300; white-space: nowrap;
       transition: opacity 0.3s;
-      white-space: nowrap;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.22);
     }
-    .toast.success { background: #1a5c2a; }
-    .toast.error   { background: #5c1a1a; }
-
-    /* ── SELECTED BANNER ── */
-    #selected-banner {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: #25200e;
-      border-top: 2px solid #f5a623;
-      padding: 10px 24px;
-      display: none;
-      align-items: center;
-      gap: 12px;
-      z-index: 50;
-      font-size: 13px;
-    }
-    #selected-banner.visible { display: flex; }
-    #selected-banner strong { color: #f5a623; }
-    #selected-banner button {
-      margin-left: auto;
-      background: none;
-      border: 1px solid #555;
-      color: #a0a0c0;
-      padding: 5px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    #selected-banner button:hover { border-color: #f5a623; color: #f5a623; }
+    .toast.success { background: #3a6e40; }
+    .toast.error   { background: #6e3a3a; }
   </style>
 </head>
 <body>
 
+<div class="progress-track">
+  <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+</div>
+
 <div class="header">
-  <h1>🏠 Housing 2 — Inventory Sort</h1>
-  <input type="text" id="respondent" placeholder="Your name (optional)">
-  <div class="progress">Placed: <span id="placed-count">0</span> / <span id="total-count">100</span></div>
+  <div class="header-title">🏠 Housing 2</div>
+  <input type="text" class="name-input" id="respondent" placeholder="Your name">
+  <div class="progress-label" id="progress-label">0 / 0</div>
   <button class="btn-submit" id="submit-btn" onclick="submitResults()">Submit</button>
 </div>
 
-<div class="categories" id="categories"></div>
-
-<div class="hint-bar">
-  <p><strong>Click</strong> a thumbnail to select it, then <strong>click a category</strong> above. Or <strong>drag and drop</strong>. Click a mini-thumb inside a category to send it back.</p>
-  <div class="unassigned-count" id="unassigned-label">100 unassigned</div>
+<div class="main">
+  <div class="item-wrap" id="item-wrap">
+    <div class="item-circle" id="item-circle" draggable="true">
+      <img class="item-thumb" id="item-thumb" src="" alt="">
+      <div class="item-thumb-ph" id="item-thumb-ph" style="display:none"></div>
+    </div>
+    <div class="item-name"  id="item-name"></div>
+    <div class="item-badge" id="item-badge"></div>
+  </div>
+  <div class="nav-row" id="nav-row">
+    <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">←</button>
+    <div class="nav-counter" id="nav-counter">— / —</div>
+    <button class="nav-btn" id="next-btn" onclick="navigate(1)">→</button>
+  </div>
+  <div class="hint" id="hint">Click a category to assign — or drag this item onto it</div>
+  <div class="done-panel" id="done-panel">
+    <div class="done-icon">✅</div>
+    <h2>All items assigned!</h2>
+    <p>Enter your name above and click Submit.</p>
+  </div>
 </div>
 
-<div class="pool-grid" id="pool"
-  ondragover="event.preventDefault()"
-  ondrop="dropOnPool(event)">
-</div>
-
-<div id="selected-banner">
-  <span>Selected: <strong id="selected-name">—</strong></span>
-  <span style="color:#666">→ click a category to assign</span>
-  <button onclick="clearSelection()">✕ Cancel</button>
-</div>
+<div class="cat-bar" id="cat-bar"></div>
 
 <script>
-// ── CONFIG ─────────────────────────────────────────────────────────────────
-// Paste your Google Apps Script webhook URL here after deployment
 const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyTjLVNOO-v2BmbAcvJf9F9m7wgPPj32FfG6wPLjNJGoTtWaugY3Fd-5e0Tww5grPlVYQ/exec';
 
-// ── FURNITURE DATA ──────────────────────────────────────────────────────────
+// ── FURNITURE — replace with your list ───────────────────────────────────────
 const FURNITURE = [
-  {id:1,   name:'Palm Plant',               type:'Plant'},
-  {id:4,   name:'Modern Flat Screen TV',    type:'TV'},
-  {id:5,   name:'Classical Armchair',       type:'Armchair'},
-  {id:6,   name:'Industrial Dining Chair',  type:'DiningChair'},
-  {id:7,   name:'Mid-Century Dining Chair', type:'DiningChair'},
-  {id:8,   name:'Cottage Sofa',             type:'Sofa'},
-  {id:11,  name:'Mid-Century Dining Table', type:'DiningTable'},
-  {id:18,  name:'Paper Bin',                type:'Bin'},
-  {id:19,  name:'Modern Armchair',          type:'Armchair'},
-  {id:20,  name:'Egg Shell Armchair',       type:'Armchair'},
-  {id:21,  name:'Modern Sofa',              type:'Sofa'},
-  {id:22,  name:'Chesterfield Sofa',        type:'Sofa'},
-  {id:23,  name:'Industrial Coffee Table',  type:'CoffeeTable'},
-  {id:24,  name:'Rustic Coffee Table',      type:'CoffeeTable'},
-  {id:25,  name:'Marble Coffee Table',      type:'CoffeeTable'},
-  {id:26,  name:'Stove',                    type:'Fireplace'},
-  {id:27,  name:'Chimney',                  type:'Fireplace'},
-  {id:28,  name:'Washing Machine',          type:'WashingMachine'},
-  {id:29,  name:'Tulip Table',              type:'DiningTable'},
-  {id:30,  name:'Rustic Table',             type:'DiningTable'},
-  {id:31,  name:'Rustic Chair',             type:'DiningChair'},
-  {id:32,  name:'Modern Desk',              type:'Desk'},
-  {id:33,  name:'Neon Desk',                type:'Desk'},
-  {id:34,  name:'Executive Desk',           type:'Desk'},
-  {id:35,  name:'Office Rolling Chair',     type:'OfficeChair'},
-  {id:36,  name:'Neon Rolling Chair',       type:'OfficeChair'},
-  {id:37,  name:'Executive Rolling Chair',  type:'OfficeChair'},
-  {id:38,  name:'Modern Oven',              type:'Stove'},
-  {id:39,  name:'Retro Oven',               type:'Stove'},
-  {id:40,  name:'Pizza Oven',               type:'Stove'},
-  {id:41,  name:'Modern Fridge',            type:'Fridge'},
-  {id:42,  name:'Retro Fridge',             type:'Fridge'},
-  {id:43,  name:'Mini Fridge',              type:'Fridge'},
-  {id:44,  name:'Modern Kitchen Cabinet',   type:'KitchenCounter'},
-  {id:45,  name:'Rustic Kitchen Cabinet',   type:'KitchenCounter'},
-  {id:46,  name:'Marble Kitchen Cabinet',   type:'KitchenCounter'},
-  {id:47,  name:'Modern Sink',              type:'KitchenSink'},
-  {id:48,  name:'Rustic Sink',              type:'KitchenSink'},
-  {id:49,  name:'Marble Sink',              type:'KitchenSink'},
-  {id:50,  name:'Trashcan',                 type:'Trashcan'},
-  {id:51,  name:'Dishwasher',               type:'Dishwasher'},
-  {id:52,  name:'Industrial Bed',           type:'DoubleBed'},
-  {id:53,  name:'Modern Bed',               type:'DoubleBed'},
-  {id:54,  name:'Racing Bed',               type:'SingleBed'},
-  {id:55,  name:'Rustic Bed',               type:'SingleBed'},
-  {id:56,  name:'Modern Nightstand',        type:'Nightstand'},
-  {id:57,  name:'Rustic Nightstand',        type:'Nightstand'},
-  {id:58,  name:'Round Side Table',         type:'Nightstand'},
-  {id:59,  name:'Modern Bookshelf',         type:'HighOpenShelve'},
-  {id:60,  name:'Rustic High Shelves',      type:'HighOpenShelve'},
-  {id:61,  name:'Industrial Bookshelf',     type:'HighOpenShelve'},
-  {id:62,  name:'Retro Bookshelf',          type:'HighOpenShelve'},
-  {id:63,  name:'Modern Closet',            type:'HighCloseShelves'},
-  {id:64,  name:'Rustic Closet',            type:'HighCloseShelves'},
-  {id:65,  name:'Locker',                   type:'HighCloseShelves'},
-  {id:66,  name:'Modern Double Drawer',     type:'LowShelve'},
-  {id:67,  name:'Rustic Sideboard',         type:'LowShelve'},
-  {id:68,  name:'Industrial Sideboard',     type:'LowShelve'},
-  {id:69,  name:'Retro Sideboard',          type:'LowShelve'},
-  {id:70,  name:'Modern Shelf',             type:'WallShelve'},
-  {id:71,  name:'Rustic Shelf',             type:'WallShelve'},
-  {id:72,  name:'Industrial Shelf',         type:'WallShelve'},
-  {id:73,  name:'Neon Shelf',               type:'WallShelve'},
-  {id:74,  name:'Modern Lamp',              type:'FloorLamp'},
-  {id:75,  name:'Rustic Lamp',              type:'FloorLamp'},
-  {id:76,  name:'Industrial Lamp',          type:'FloorLamp'},
-  {id:77,  name:'Sputnik Lamp',             type:'FloorLamp'},
-  {id:78,  name:'Monstera Plant',           type:'Plant'},
-  {id:79,  name:'Plant Wall',               type:'Plant'},
-  {id:80,  name:'Cacti',                    type:'Plant'},
-  {id:81,  name:'Modern Rug',               type:'Rug'},
-  {id:82,  name:'Persian Rug',              type:'Rug'},
-  {id:83,  name:'Boho Rug',                 type:'Rug'},
-  {id:84,  name:'Cow Rug',                  type:'Rug'},
-  {id:85,  name:'Dumbbell Rack',            type:'Sport'},
-  {id:86,  name:'Punching Bag',             type:'Sport'},
-  {id:87,  name:'Exercise Bike',            type:'Sport'},
-  {id:88,  name:'Trophy Shelf',             type:'Sport'},
-  {id:89,  name:'Guitar',                   type:'Music'},
-  {id:90,  name:'Piano',                    type:'Music'},
-  {id:91,  name:'Vintage Record Player',    type:'Music'},
-  {id:92,  name:'Jukebox',                  type:'Music'},
-  {id:93,  name:'Skeleton',                 type:'Science'},
-  {id:94,  name:'Vintage Globe',            type:'Science'},
-  {id:95,  name:'Telescope',               type:'Science'},
-  {id:96,  name:'Pin Board',               type:'Science'},
-  {id:97,  name:'Teddy Bear',              type:'Toy'},
-  {id:98,  name:'Billard Table',           type:'Toy'},
-  {id:99,  name:'Toy Box',                 type:'Toy'},
-  {id:100, name:'Arcade Machine',          type:'Toy'},
-  {id:101, name:'Traffic Rug',             type:'Toy'},
-  {id:102, name:'Aquarium',               type:'Decorative'},
-  {id:103, name:'Pet Bed',                type:'Decorative'},
-  {id:104, name:'Marble Statue',           type:'Decorative'},
-  {id:105, name:'Fishing Trophy',          type:'Decorative'},
-  {id:106, name:'Retro TV',               type:'TV'},
-  {id:107, name:'Curtain A',              type:'Curtain'},
-  {id:108, name:'Curtain B',              type:'Curtain'},
-  {id:109, name:'Speaker',               type:'Music'},
-  {id:110, name:'Coat Rack',             type:'Decorative'},
+  {id:1,   name:'Palm Plant'},
+  {id:4,   name:'Modern Flat Screen TV'},
+  {id:5,   name:'Classical Armchair'},
+  {id:6,   name:'Industrial Dining Chair'},
+  {id:7,   name:'Mid-Century Dining Chair'},
+  {id:8,   name:'Cottage Sofa'},
+  {id:11,  name:'Mid-Century Dining Table'},
+  {id:18,  name:'Paper Bin'},
+  {id:19,  name:'Modern Armchair'},
+  {id:20,  name:'Egg Shell Armchair'},
+  {id:21,  name:'Modern Sofa'},
+  {id:22,  name:'Chesterfield Sofa'},
+  {id:23,  name:'Industrial Coffee Table'},
+  {id:24,  name:'Rustic Coffee Table'},
+  {id:25,  name:'Marble Coffee Table'},
+  {id:26,  name:'Stove'},
+  {id:27,  name:'Chimney'},
+  {id:28,  name:'Washing Machine'},
+  {id:29,  name:'Tulip Table'},
+  {id:30,  name:'Rustic Table'},
+  {id:31,  name:'Rustic Chair'},
+  {id:32,  name:'Modern Desk'},
+  {id:33,  name:'Neon Desk'},
+  {id:34,  name:'Executive Desk'},
+  {id:35,  name:'Office Rolling Chair'},
+  {id:36,  name:'Neon Rolling Chair'},
+  {id:37,  name:'Executive Rolling Chair'},
+  {id:38,  name:'Modern Oven'},
+  {id:39,  name:'Retro Oven'},
+  {id:40,  name:'Pizza Oven'},
+  {id:41,  name:'Modern Fridge'},
+  {id:42,  name:'Retro Fridge'},
+  {id:43,  name:'Mini Fridge'},
+  {id:44,  name:'Modern Kitchen Cabinet'},
+  {id:45,  name:'Rustic Kitchen Cabinet'},
+  {id:46,  name:'Marble Kitchen Cabinet'},
+  {id:47,  name:'Modern Sink'},
+  {id:48,  name:'Rustic Sink'},
+  {id:49,  name:'Marble Sink'},
+  {id:50,  name:'Trashcan'},
+  {id:51,  name:'Dishwasher'},
+  {id:52,  name:'Industrial Bed'},
+  {id:53,  name:'Modern Bed'},
+  {id:54,  name:'Racing Bed'},
+  {id:55,  name:'Rustic Bed'},
+  {id:56,  name:'Modern Nightstand'},
+  {id:57,  name:'Rustic Nightstand'},
+  {id:58,  name:'Round Side Table'},
+  {id:59,  name:'Modern Bookshelf'},
+  {id:60,  name:'Rustic High Shelves'},
+  {id:61,  name:'Industrial Bookshelf'},
+  {id:62,  name:'Retro Bookshelf'},
+  {id:63,  name:'Modern Closet'},
+  {id:64,  name:'Rustic Closet'},
+  {id:65,  name:'Locker'},
+  {id:66,  name:'Modern Double Drawer'},
+  {id:67,  name:'Rustic Sideboard'},
+  {id:68,  name:'Industrial Sideboard'},
+  {id:69,  name:'Retro Sideboard'},
+  {id:70,  name:'Modern Shelf'},
+  {id:71,  name:'Rustic Shelf'},
+  {id:72,  name:'Industrial Shelf'},
+  {id:73,  name:'Neon Shelf'},
+  {id:74,  name:'Modern Lamp'},
+  {id:75,  name:'Rustic Lamp'},
+  {id:76,  name:'Industrial Lamp'},
+  {id:77,  name:'Sputnik Lamp'},
+  {id:78,  name:'Monstera Plant'},
+  {id:79,  name:'Plant Wall'},
+  {id:80,  name:'Cacti'},
+  {id:81,  name:'Modern Rug'},
+  {id:82,  name:'Persian Rug'},
+  {id:83,  name:'Boho Rug'},
+  {id:84,  name:'Cow Rug'},
+  {id:85,  name:'Dumbbell Rack'},
+  {id:86,  name:'Punching Bag'},
+  {id:87,  name:'Exercise Bike'},
+  {id:88,  name:'Trophy Shelf'},
+  {id:89,  name:'Guitar'},
+  {id:90,  name:'Piano'},
+  {id:91,  name:'Vintage Record Player'},
+  {id:92,  name:'Jukebox'},
+  {id:93,  name:'Skeleton'},
+  {id:94,  name:'Vintage Globe'},
+  {id:95,  name:'Telescope'},
+  {id:96,  name:'Pin Board'},
+  {id:97,  name:'Teddy Bear'},
+  {id:98,  name:'Billard Table'},
+  {id:99,  name:'Toy Box'},
+  {id:100, name:'Arcade Machine'},
+  {id:101, name:'Traffic Rug'},
+  {id:102, name:'Aquarium'},
+  {id:103, name:'Pet Bed'},
+  {id:104, name:'Marble Statue'},
+  {id:105, name:'Fishing Trophy'},
+  {id:106, name:'Retro TV'},
+  {id:107, name:'Curtain A'},
+  {id:108, name:'Curtain B'},
+  {id:109, name:'Speaker'},
+  {id:110, name:'Coat Rack'},
 ];
 
 const CATEGORIES = [
@@ -383,250 +303,122 @@ const CATEGORIES = [
   {id:6, name:'Decor',             emoji:'🪴', icon:'icons/cat6.png'},
 ];
 
-// ── STATE ───────────────────────────────────────────────────────────────────
 const assignments = {};
-let selectedId  = null;
-let dragId      = null;
-
 FURNITURE.forEach(f => assignments[f.id] = null);
+let currentIndex = 0;
 
-// ── RENDER ───────────────────────────────────────────────────────────────────
-function render() {
+function renderItem() {
+  const allDone = FURNITURE.every(f => assignments[f.id] !== null);
+  const f = FURNITURE[currentIndex];
+  document.getElementById('item-wrap').style.display  = allDone ? 'none' : '';
+  document.getElementById('nav-row').style.display    = allDone ? 'none' : '';
+  document.getElementById('hint').style.display       = allDone ? 'none' : '';
+  document.getElementById('done-panel').classList.toggle('visible', allDone);
+  if (allDone || !f) return;
+
+  const thumb = document.getElementById('item-thumb');
+  const ph    = document.getElementById('item-thumb-ph');
+  thumb.src   = `thumbnails/${encodeURIComponent(f.name)}.png`;
+  thumb.style.display = ''; ph.style.display = 'none';
+  thumb.onerror = function() { this.style.display='none'; ph.style.display='flex'; ph.textContent=f.name; };
+
+  document.getElementById('item-name').textContent = f.name;
+
+  const catId = assignments[f.id];
+  const cat   = catId ? CATEGORIES.find(c => c.id === catId) : null;
+  const badge = document.getElementById('item-badge');
+  badge.textContent = cat ? `${cat.emoji} ${cat.name}` : '';
+  badge.classList.toggle('visible', !!cat);
+  document.getElementById('item-circle').classList.toggle('is-assigned', !!cat);
+
+  document.getElementById('nav-counter').textContent = `${currentIndex + 1} / ${FURNITURE.length}`;
+  document.getElementById('prev-btn').disabled = currentIndex === 0;
+  document.getElementById('next-btn').disabled = currentIndex === FURNITURE.length - 1;
+
   renderCategories();
-  renderPool();
-  renderBanner();
-  updateProgress();
 }
 
 function renderCategories() {
-  const el = document.getElementById('categories');
-  el.innerHTML = '';
-
+  const bar    = document.getElementById('cat-bar');
+  bar.innerHTML= '';
+  const curCat = assignments[FURNITURE[currentIndex]?.id] ?? null;
   CATEGORIES.forEach(cat => {
-    const assigned = FURNITURE.filter(f => assignments[f.id] === cat.id);
-    const bin = document.createElement('div');
-    bin.className = 'cat-bin' + (selectedId !== null ? ' ready' : '');
-    bin.dataset.catId = cat.id;
-
-    bin.ondragover  = e => { e.preventDefault(); bin.classList.add('drag-over'); };
-    bin.ondragleave = ()=> bin.classList.remove('drag-over');
-    bin.ondrop      = e => { e.preventDefault(); bin.classList.remove('drag-over'); dropOnCat(cat.id); };
-    bin.onclick     = ()=> assignSelected(cat.id);
-
-    // Icon
-    const iconImg = document.createElement('img');
-    iconImg.src = cat.icon;
-    iconImg.className = 'cat-icon';
-    iconImg.onerror = function() {
+    const count = FURNITURE.filter(f => assignments[f.id] === cat.id).length;
+    const bin   = document.createElement('div');
+    bin.className  = 'cat-bin' + (curCat === cat.id ? ' active-cat' : '');
+    bin.title      = cat.name;
+    bin.onclick    = () => assign(cat.id);
+    bin.ondragover = e => { e.preventDefault(); bin.classList.add('drag-over'); };
+    bin.ondragleave= () => bin.classList.remove('drag-over');
+    bin.ondrop     = e => { e.preventDefault(); bin.classList.remove('drag-over'); assign(cat.id); };
+    const icon = document.createElement('img');
+    icon.src = cat.icon; icon.className = 'cat-icon';
+    icon.onerror = function() {
       this.remove();
       const fb = document.createElement('div');
-      fb.className = 'cat-icon-fallback';
-      fb.textContent = cat.emoji;
-      bin.prepend(fb);
+      fb.className='cat-icon-fb'; fb.textContent=cat.emoji; bin.prepend(fb);
     };
-
-    const count = document.createElement('span');
-    count.className = 'cat-count' + (assigned.length > 0 ? ' full' : '');
-    count.textContent = assigned.length;
-
-    const items = document.createElement('div');
-    items.className = 'cat-items';
-    assigned.slice(0, 18).forEach(f => {
-      const img = document.createElement('img');
-      img.src = `thumbnails/${encodeURIComponent(f.name)}.png`;
-      img.className = 'cat-thumb';
-      img.title = f.name;
-      img.onclick = e => { e.stopPropagation(); unassign(f.id); };
-      img.onerror = function() {
-        this.remove();
-        const ph = document.createElement('div');
-        ph.className = 'cat-thumb-ph';
-        ph.title = f.name;
-        ph.textContent = f.name.substring(0, 10);
-        ph.onclick = e => { e.stopPropagation(); unassign(f.id); };
-        items.appendChild(ph);
-      };
-      items.appendChild(img);
-    });
-    if (assigned.length > 18) {
-      const more = document.createElement('div');
-      more.className = 'cat-thumb-ph';
-      more.textContent = `+${assigned.length - 18}`;
-      items.appendChild(more);
-    }
-
-    bin.appendChild(iconImg);
-    bin.appendChild(count);
-    bin.appendChild(items);
-    el.appendChild(bin);
+    const badge = document.createElement('div');
+    badge.className  = 'cat-count' + (count > 0 ? ' filled' : '');
+    badge.textContent= count;
+    bin.appendChild(icon); bin.appendChild(badge); bar.appendChild(bin);
   });
-}
-
-function renderPool() {
-  const el = document.getElementById('pool');
-  el.innerHTML = '';
-  const unassigned = FURNITURE.filter(f => assignments[f.id] === null);
-
-  if (unassigned.length === 0) {
-    el.innerHTML = '<div class="pool-empty">✅ All furniture assigned — ready to submit!</div>';
-    return;
-  }
-
-  unassigned.forEach(f => {
-    const item = document.createElement('div');
-    item.className = 'furn-item' + (selectedId === f.id ? ' selected' : '');
-    item.dataset.id  = f.id;
-    item.draggable   = true;
-
-    item.ondragstart = e => {
-      dragId = f.id;
-      item.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', f.id);
-    };
-    item.ondragend   = ()=> { dragId = null; item.classList.remove('dragging'); };
-    item.onclick     = ()=> selectItem(f.id);
-
-    const img = document.createElement('img');
-    img.src = `thumbnails/${encodeURIComponent(f.name)}.png`;
-    img.className = 'furn-thumb';
-    img.alt = f.name;
-    img.title = f.name;
-    img.onerror = function() {
-      this.remove();
-      const ph = document.createElement('div');
-      ph.className = 'furn-thumb-ph';
-      ph.textContent = f.name;
-      item.prepend(ph);
-    };
-
-    item.appendChild(img);
-    el.appendChild(item);
-  });
-}
-
-function renderBanner() {
-  const banner = document.getElementById('selected-banner');
-  if (selectedId !== null) {
-    const f = FURNITURE.find(x => x.id === selectedId);
-    document.getElementById('selected-name').textContent = f ? f.name : '';
-    banner.classList.add('visible');
-  } else {
-    banner.classList.remove('visible');
-  }
 }
 
 function updateProgress() {
-  const placed     = FURNITURE.filter(f => assignments[f.id] !== null).length;
-  const unassigned = FURNITURE.length - placed;
-  document.getElementById('placed-count').textContent    = placed;
-  document.getElementById('unassigned-label').textContent = `${unassigned} unassigned`;
+  const placed = FURNITURE.filter(f => assignments[f.id] !== null).length;
+  document.getElementById('progress-fill').style.width = (placed / FURNITURE.length * 100) + '%';
+  document.getElementById('progress-label').textContent = `${placed} / ${FURNITURE.length}`;
 }
 
-// ── INTERACTIONS ─────────────────────────────────────────────────────────────
-function selectItem(id) {
-  selectedId = selectedId === id ? null : id;
-  render();
+function assign(catId) {
+  const f = FURNITURE[currentIndex]; if (!f) return;
+  assignments[f.id] = catId; updateProgress();
+  let next = FURNITURE.findIndex((item, i) => i > currentIndex && !assignments[item.id]);
+  if (next === -1) next = FURNITURE.findIndex(item => !assignments[item.id]);
+  if (next !== -1) currentIndex = next;
+  renderItem();
 }
 
-function clearSelection() {
-  selectedId = null;
-  render();
+function navigate(dir) {
+  const n = currentIndex + dir;
+  if (n < 0 || n >= FURNITURE.length) return;
+  currentIndex = n; renderItem();
 }
 
-function assignSelected(catId) {
-  if (selectedId !== null) {
-    assignments[selectedId] = catId;
-    selectedId = null;
-    render();
-  }
-}
+const circle = document.getElementById('item-circle');
+circle.ondragstart = e => { e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain','item'); setTimeout(()=>circle.classList.add('dragging'),0); };
+circle.ondragend   = () => circle.classList.remove('dragging');
 
-function unassign(furnitureId) {
-  assignments[furnitureId] = null;
-  selectedId = null;
-  render();
-}
-
-function dropOnCat(catId) {
-  const id = dragId !== null ? dragId : selectedId;
-  if (id !== null) {
-    assignments[id] = catId;
-    dragId     = null;
-    selectedId = null;
-    render();
-  }
-}
-
-function dropOnPool(e) {
-  if (dragId !== null) {
-    assignments[dragId] = null;
-    dragId = null;
-    render();
-  }
-}
-
-// ── SUBMIT ───────────────────────────────────────────────────────────────────
 async function submitResults() {
-  const unassigned = FURNITURE.filter(f => assignments[f.id] === null).length;
-  if (unassigned > 0) {
-    const ok = confirm(`${unassigned} item(s) not assigned. Submit anyway?`);
-    if (!ok) return;
-  }
-
-  if (!WEBHOOK_URL) {
-    showToast('⚠️ No webhook URL configured in index.html', 'error');
-    return;
-  }
-
+  const missing = FURNITURE.filter(f => !assignments[f.id]).length;
+  if (missing && !confirm(`${missing} item(s) not assigned. Submit anyway?`)) return;
+  if (!WEBHOOK_URL) { showToast('No webhook URL configured','error'); return; }
   const respondent = document.getElementById('respondent').value.trim() || 'Anonymous';
-  const sessionId  = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-
   const payload = {
-    timestamp:   new Date().toISOString(),
-    respondent,
-    session_id:  sessionId,
+    timestamp: new Date().toISOString(), respondent,
+    session_id: Date.now().toString(36)+Math.random().toString(36).slice(2,5),
     assignments: FURNITURE.map(f => ({
-      id:            f.id,
-      name:          f.name,
-      type:          f.type,
+      id: f.id, name: f.name,
       category_id:   assignments[f.id] ?? '',
-      category_name: assignments[f.id]
-        ? CATEGORIES.find(c => c.id === assignments[f.id]).name
-        : 'Unassigned',
-    }))
+      category_name: assignments[f.id] ? CATEGORIES.find(c=>c.id===assignments[f.id]).name : 'Unassigned',
+    })),
   };
-
   const btn = document.getElementById('submit-btn');
-  btn.disabled     = true;
-  btn.textContent  = 'Sending…';
-
+  btn.disabled=true; btn.textContent='Sending…';
   try {
-    await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      mode: 'no-cors',
-    });
-    showToast('✅ Results submitted!', 'success');
-    btn.textContent = 'Submitted ✓';
-  } catch (err) {
-    showToast('❌ Submission failed. Check webhook URL.', 'error');
-    btn.disabled    = false;
-    btn.textContent = 'Submit';
-  }
+    await fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),mode:'no-cors'});
+    showToast('Submitted!','success'); btn.textContent='Submitted ✓';
+  } catch { showToast('Submission failed','error'); btn.disabled=false; btn.textContent='Submit'; }
 }
 
-function showToast(msg, type = '') {
-  const t = document.createElement('div');
-  t.className   = 'toast ' + type;
-  t.textContent = msg;
+function showToast(msg, type='') {
+  const t=document.createElement('div'); t.className='toast '+type; t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
+  setTimeout(()=>{ t.style.opacity='0'; setTimeout(()=>t.remove(),300); },3000);
 }
 
-// ── INIT ─────────────────────────────────────────────────────────────────────
-render();
+renderItem(); updateProgress();
 </script>
 </body>
 </html>
