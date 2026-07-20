@@ -87,7 +87,7 @@
     }
     .item-badge.visible { display: block; }
     .submit-row {
-      display: flex; align-items: center; gap: 8px; margin-top: 4px;
+      display: flex; align-items: center; gap: 8px; margin-top: 8px; justify-content: center;
     }
     .nav-row { display: flex; align-items: center; gap: 14px; }
     .nav-btn {
@@ -102,6 +102,12 @@
     .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .nav-counter { font-size: 13px; color: var(--text-mid); min-width: 56px; text-align: center; font-weight: 500; }
     .hint { font-size: 12px; color: var(--text-soft); }
+    .instruction {
+      font-size: 13px; color: var(--text-mid);
+      text-align: center; max-width: 340px; line-height: 1.5;
+      background: rgba(255,255,255,0.5);
+      padding: 10px 16px; border-radius: 10px;
+    }
     .done-panel { display: none; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
     .done-panel.visible { display: flex; }
     .done-panel .done-icon { font-size: 52px; }
@@ -165,10 +171,7 @@
 </div>
 
 <div class="main">
-  <div class="submit-row">
-    <input type="text" class="name-input" id="respondent" placeholder="Your name">
-    <button class="btn-submit" id="submit-btn" onclick="submitResults()">Submit</button>
-  </div>
+  <div class="instruction">Furniture are shown one by one, select the icon/category you feel the item belongs to. If you have any issue or feedback please raise it on Slack.</div>
   <div class="item-wrap" id="item-wrap">
     <div class="item-circle" id="item-circle" draggable="true">
       <img class="item-thumb" id="item-thumb" src="" alt="">
@@ -186,7 +189,11 @@
   <div class="done-panel" id="done-panel">
     <div class="done-icon">✅</div>
     <h2>All items assigned!</h2>
-    <p>Enter your name above and click Submit.</p>
+    <p>Enter your name and submit your results.</p>
+    <div class="submit-row">
+      <input type="text" class="name-input" id="respondent" placeholder="Your name">
+      <button class="btn-submit" id="submit-btn" onclick="submitResults()">Submit</button>
+    </div>
   </div>
 </div>
 
