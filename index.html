@@ -79,13 +79,16 @@
       text-align: center; font-size: 12px; color: var(--text-mid);
       padding: 16px; pointer-events: none;
     }
-    .item-name { font-size: 14px; font-weight: 600; color: var(--text-dark); text-align: center; }
+    .item-name { display: none; }
     .item-badge {
       font-size: 11px; font-weight: 600; color: var(--accent-dk);
       background: rgba(232,148,90,0.15);
       padding: 3px 12px; border-radius: 99px; display: none;
     }
     .item-badge.visible { display: block; }
+    .submit-row {
+      display: flex; align-items: center; gap: 8px; margin-top: 4px;
+    }
     .nav-row { display: flex; align-items: center; gap: 14px; }
     .nav-btn {
       width: 36px; height: 36px; border-radius: 50%;
@@ -158,12 +161,14 @@
 
 <div class="header">
   <div class="header-title">🏠 Housing 2</div>
-  <input type="text" class="name-input" id="respondent" placeholder="Your name">
   <div class="progress-label" id="progress-label">0 / 0</div>
-  <button class="btn-submit" id="submit-btn" onclick="submitResults()">Submit</button>
 </div>
 
 <div class="main">
+  <div class="submit-row">
+    <input type="text" class="name-input" id="respondent" placeholder="Your name">
+    <button class="btn-submit" id="submit-btn" onclick="submitResults()">Submit</button>
+  </div>
   <div class="item-wrap" id="item-wrap">
     <div class="item-circle" id="item-circle" draggable="true">
       <img class="item-thumb" id="item-thumb" src="" alt="">
